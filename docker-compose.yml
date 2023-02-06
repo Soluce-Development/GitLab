@@ -1,6 +1,9 @@
 version: '3.6'
+
 services:
+
   gitlab:
+
     image: 'gitlab/gitlab-ce:latest'
     restart: always
     hostname: 'gitlab.codicam.com'
@@ -11,23 +14,14 @@ services:
         nginx['listen_https'] = false
         nginx['listen_port'] = 80
 
-#        nginx['proxy_set_headers'] = {
-#                'X-Forwarded-Proto' => 'https',
-#                'X-Forwarded-Ssl' => 'on',
-#                'Host' => 'gitlab.codicam.com'
-#                }
-
     ports:
 #      - '8929:8929'
       - '2224:22'
     volumes:
-      - ./GitlabHome/config:/etc/gitlab
-      - ./GitlabHome/logs:/var/log/gitlab
-      - ./GitlabHome/data:/var/opt/gitlab
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
     shm_size: '256m'
-
-
-
 
     labels:
       - "traefik.enable=true"
@@ -38,14 +32,10 @@ services:
       - "traefik.http.routers.gitlab.entrypoints=web"
       - "traefik.http.routers.gitlab.middlewares=test-redirectscheme"
 
-
-
       - "traefik.http.routers.gitlab-secure.rule=Host(`gitlab.codicam.com`)"
       - "traefik.http.routers.gitlab-secure.entrypoints=websecure"
       - "traefik.http.routers.gitlab-secure.tls.certresolver=myresolver"
       - "traefik.http.routers.gitlab-secure.middlewares=test-compress,test-errorpages"
-
-
 
       # Error Pages Middleware
       - "traefik.http.middlewares.test-errorpages.errors.status=400-599"
@@ -64,10 +54,9 @@ services:
 
 
   gitlab-runner:
+
     image: 'gitlab/gitlab-runner:latest'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./GitLabRunner/config:/etc/gitlab-runner
+      - ./gitLab-runner/config:/etc/gitlab-runner
     restart: always
-
-
