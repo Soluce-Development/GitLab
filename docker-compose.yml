@@ -1,0 +1,73 @@
+version: '3.6'
+services:
+  gitlab:
+    image: 'gitlab/gitlab-ce:latest'
+    restart: always
+    hostname: 'gitlab.codicam.com'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.codicam.com'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+        nginx['listen_https'] = false
+        nginx['listen_port'] = 80
+
+#        nginx['proxy_set_headers'] = {
+#                'X-Forwarded-Proto' => 'https',
+#                'X-Forwarded-Ssl' => 'on',
+#                'Host' => 'gitlab.codicam.com'
+#                }
+
+    ports:
+#      - '8929:8929'
+      - '2224:22'
+    volumes:
+      - ./GitlabHome/config:/etc/gitlab
+      - ./GitlabHome/logs:/var/log/gitlab
+      - ./GitlabHome/data:/var/opt/gitlab
+    shm_size: '256m'
+
+
+
+
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.gitlab.rule=Host(`gitlab.codicam.com`)"
+      - "traefik.http.services.gitlab.loadbalancer.server.port=80"
+
+      - "traefik.http.routers.gitlab.entrypoints=web"
+      - "traefik.http.routers.gitlab.middlewares=test-redirectscheme"
+
+
+
+      - "traefik.http.routers.gitlab-secure.rule=Host(`gitlab.codicam.com`)"
+      - "traefik.http.routers.gitlab-secure.entrypoints=websecure"
+      - "traefik.http.routers.gitlab-secure.tls.certresolver=myresolver"
+      - "traefik.http.routers.gitlab-secure.middlewares=test-compress,test-errorpages"
+
+
+
+      # Error Pages Middleware
+      - "traefik.http.middlewares.test-errorpages.errors.status=400-599"
+      - "traefik.http.middlewares.test-errorpages.errors.service=error"
+      - "traefik.http.middlewares.test-errorpages.errors.query=/{status}.html"
+
+      # Rate Limit Middleware
+      #      - "traefik.http.middlewares.test-ratelimit.ratelimit.average=2"
+
+      # Compress Middleware
+      - "traefik.http.middlewares.test-compress.compress=true"
+
+      # Redirect Scheme HTTP -> HTTPS
+      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
+      #      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.permanent=true"
+
+
+  gitlab-runner:
+    image: 'gitlab/gitlab-runner:latest'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./GitLabRunner/config:/etc/gitlab-runner
+    restart: always
+
+
