@@ -5,17 +5,45 @@ services:
   gitlab:
 
     image: 'gitlab/gitlab-ce:latest'
+    networks:
+      - traefik
+
     restart: always
     hostname: 'gitlab.codicam.com'
-    environment:
-      GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://gitlab.codicam.com'
-        gitlab_rails['gitlab_shell_ssh_port'] = 2224
-        nginx['listen_https'] = false
-        nginx['listen_port'] = 80
+
+#    environment:
+#      GITLAB_OMNIBUS_CONFIG: |
+#        external_url 'https://gitlab.codicam.com'
+#        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+#
+#        nginx['listen_port'] = 80
+#        nginx['listen_https'] = false
+#        nginx['proxy_set_headers'] = {
+#          "X-Forwarded-Proto" => "https",
+#          "X-Forwarded-Ssl" => "on"
+#        }
+
+
+#        gitlab_rails['trusted_proxies'] = ['192.168.192.2/20']
+    #        nginx['real_ip_trusted_addresses'] = [ '192.168.192.2/20' ]
+    #        nginx['real_ip_header'] = 'X-Forwarded-For'
+    #        nginx['real_ip_recursive'] = 'on'
+
+
+
+    #        letsencrypt['enable'] = false
+#        nginx['http2_enabled'] = false
+
+#        nginx['proxy_set_headers'] = {
+#          "Host" => "$$http_host",
+#          "X-Real-IP" => "$$remote_addr",
+#          "X-Forwarded-For" => "$$proxy_add_x_forwarded_for",
+#          "X-Forwarded-Proto" => "https",
+#          "X-Forwarded-Ssl" => "on"
+#        }
 
     ports:
-#      - '8929:8929'
+      - '8929:80'
       - '2224:22'
     volumes:
       - ./gitlab/config:/etc/gitlab
@@ -30,12 +58,14 @@ services:
       - "traefik.http.services.gitlab.loadbalancer.server.port=80"
 
       - "traefik.http.routers.gitlab.entrypoints=web"
-      - "traefik.http.routers.gitlab.middlewares=test-redirectscheme"
+#      - "traefik.http.routers.gitlab.middlewares=test-redirectscheme"
 
       - "traefik.http.routers.gitlab-secure.rule=Host(`gitlab.codicam.com`)"
       - "traefik.http.routers.gitlab-secure.entrypoints=websecure"
       - "traefik.http.routers.gitlab-secure.tls.certresolver=myresolver"
       - "traefik.http.routers.gitlab-secure.middlewares=test-compress,test-errorpages"
+      - "traefik.http.routers.gitlab.service=gitlab"
+
 
       # Error Pages Middleware
       - "traefik.http.middlewares.test-errorpages.errors.status=400-599"
@@ -49,7 +79,7 @@ services:
       - "traefik.http.middlewares.test-compress.compress=true"
 
       # Redirect Scheme HTTP -> HTTPS
-      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
+#      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
       #      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.permanent=true"
 
 
@@ -60,3 +90,24 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./gitLab-runner/config:/etc/gitlab-runner
     restart: always
+
+#
+#networks:
+#  traefik:
+#    external: true
+
+##
+#networks:
+#  default:
+#    external: true
+#    name: traefik
+
+#networks:
+#  default:
+#    external:
+#      name: traefik
+#
+networks:
+  traefik:
+    name: traefik
+    driver: bridge
