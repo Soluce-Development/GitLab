@@ -12,18 +12,25 @@ services:
 
     environment:
       GITLAB_OMNIBUS_CONFIG: |
+        
+        # ---------- GENERAL GITLAB CONFIG ---------- #
+        
         external_url 'https://gitlab.codicam.com'
-        registry_external_url 'https://registry.gitlab.codicam.com'
         gitlab_rails['gitlab_shell_ssh_port'] = 22
         gitlab_rails['lfs_enabled'] = true
         nginx['listen_https'] = false
         nginx['listen_port'] = 80
-        registry_nginx['listen_port'] = 80
-        registry_nginx['listen_https'] = false
         nginx['proxy_set_headers'] = {
           "X-Forwarded-Proto" => "https",
           "X-Forwarded-Ssl" => "on"
         }
+        
+        # ---------- GITLAB REGISTRY CONFIG ---------- #
+        
+        registry_external_url 'https://registry.gitlab.codicam.com'
+        registry_nginx['listen_port'] = 80
+        registry_nginx['listen_https'] = false
+        registry['enable'] = true
 
     ports:
       - '8929:80'
@@ -35,6 +42,9 @@ services:
     shm_size: '256m'
 
     labels:
+
+      # ---------- TRAEFIK GLOBAL GITLAB CONFIG ---------- #
+
       - "traefik.enable=true"
 
       - "traefik.http.routers.gitlab.rule=Host(`gitlab.codicam.com`)"
@@ -46,6 +56,7 @@ services:
       - "traefik.http.routers.gitlab-secure.entrypoints=websecure"
       - "traefik.http.routers.gitlab-secure.tls.certresolver=myresolver"
       - "traefik.http.routers.gitlab-secure.middlewares=test-compress,test-errorpages"
+
       - "traefik.http.routers.gitlab.service=gitlab"
 
       # Headers
@@ -65,6 +76,13 @@ services:
 
       # Redirect Scheme HTTP -> HTTPS
 #      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
+
+      # ---------- TRAEFIK GITLAB REGISTRY CONFIG ---------- #
+
+      - "traefik.http.routers.registry-secure.rule=Host(`registry.gitlab.codicam.com`)"
+      - "traefik.http.routers.registry-secure.tls.certresolver=myresolver"
+      - "traefik.http.routers.registry-secure.entrypoints=websecure"
+      - "traefik.http.routers.registry.service=registry"
 
 
   gitlab-runner:
