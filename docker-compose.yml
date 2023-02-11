@@ -7,24 +7,23 @@ services:
     image: 'gitlab/gitlab-ce:latest'
     networks:
       - traefik
-
     restart: always
     hostname: 'gitlab.codicam.com'
-
 
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'https://gitlab.codicam.com'
+        registry_external_url 'https://registry.gitlab.codicam.com'
         gitlab_rails['gitlab_shell_ssh_port'] = 22
         gitlab_rails['lfs_enabled'] = true
         nginx['listen_https'] = false
         nginx['listen_port'] = 80
+        registry_nginx['listen_port'] = 80
+        registry_nginx['listen_https'] = false
         nginx['proxy_set_headers'] = {
           "X-Forwarded-Proto" => "https",
           "X-Forwarded-Ssl" => "on"
         }
-        
-        
 
     ports:
       - '8929:80'
@@ -42,7 +41,6 @@ services:
       - "traefik.http.services.gitlab.loadbalancer.server.port=80"
 
       - "traefik.http.routers.gitlab.entrypoints=web"
-#      - "traefik.http.routers.gitlab.middlewares=test-redirectscheme"
 
       - "traefik.http.routers.gitlab-secure.rule=Host(`gitlab.codicam.com`)"
       - "traefik.http.routers.gitlab-secure.entrypoints=websecure"
@@ -57,23 +55,16 @@ services:
       - 'traefik.http.middlewares.gitlab-headers.headers.customresponseheaders.X_FORWARDED_PROTO=https'
       - 'traefik.http.middlewares.gitlab-headers.headers.customresponseheaders.X_Forwarded-Ssl=on'
 
-
-
-
       # Error Pages Middleware
       - "traefik.http.middlewares.test-errorpages.errors.status=400-599"
       - "traefik.http.middlewares.test-errorpages.errors.service=error"
       - "traefik.http.middlewares.test-errorpages.errors.query=/{status}.html"
-
-      # Rate Limit Middleware
-      #      - "traefik.http.middlewares.test-ratelimit.ratelimit.average=2"
 
       # Compress Middleware
       - "traefik.http.middlewares.test-compress.compress=true"
 
       # Redirect Scheme HTTP -> HTTPS
 #      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
-      #      - "traefik.http.middlewares.test-redirectscheme.redirectscheme.permanent=true"
 
 
   gitlab-runner:
